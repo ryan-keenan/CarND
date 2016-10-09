@@ -135,8 +135,8 @@ class Add(Node):
             return
         for n in self.output_nodes:
             dval = n.dvalues[self]
-            self.dvalues[self.input_nodes[0]] += 1 * dval
-            self.dvalues[self.input_nodes[1]] += 1 * dval
+            self.dvalues[self.input_nodes[0]] += dval
+            self.dvalues[self.input_nodes[1]] += dval
 
 
 class Mul(Node):
@@ -144,13 +144,18 @@ class Mul(Node):
         Node.__init__(self, [x, y])
 
     def forward(self):
-        # TODO: implement
-        pass
+        self.value = self.input_nodes[0].value * self.input_nodes[1].value
 
     def backward(self):
-        # TODO: implement
-        # Look back to the case study example in the notebook.
         self.dvalues = {n: 0 for n in self.input_nodes}
+        if len(self.output_nodes) == 0:
+            self.dvalues[self.input_nodes[0]] += self.input_nodes[1].value
+            self.dvalues[self.input_nodes[1]] += self.input_nodes[0].value
+            return
+        for n in self.output_nodes:
+            dval = n.dvalues[self]
+            self.dvalues[self.input_nodes[0]] += self.input_nodes[1].value * dval
+            self.dvalues[self.input_nodes[1]] += self.input_nodes[0].value * dval
 
 
 class Linear(Node):
@@ -158,13 +163,23 @@ class Linear(Node):
         Node.__init__(self, [x, w, b])
 
     def forward(self):
-        # TODO: implement
-        pass
+        x = self.input_nodes[0]
+        w = self.input_nodes[1]
+        b = self.input_nodes[2]
+        self.value = x.value.dot(w.value) + b.value
 
     def backward(self):
-        # TODO: implement
-        self.dvalues = {n: np.zeros_like(n.value) for n in self.input_nodes}
-
+        self.dvalues = {n: 0 for n in self.input_nodes}
+        if len(self.output_nodes) == 0:
+            self.dvalues[self.input_nodes[0]] += self.input_nodes[1].value
+            self.dvalues[self.input_nodes[1]] += self.input_nodes[0].value
+            self.dvalues[self.input_nodes[0]] += 1
+            return
+        for n in self.output_nodes:
+            dval = n.dvalues[self]
+            self.dvalues[self.input_nodes[0]] += self.input_nodes[1].value.dot(dval)
+            self.dvalues[self.input_nodes[1]] += self.input_nodes[0].value.dot(dval)
+            self.dvalues[self.input_nodes[0]] += dval
 
 class Sigmoid(Node):
     def __init__(self, x):

@@ -173,29 +173,33 @@ class Linear(Node):
         if len(self.output_nodes) == 0:
             self.dvalues[self.input_nodes[0]] += self.input_nodes[1].value
             self.dvalues[self.input_nodes[1]] += self.input_nodes[0].value
-            self.dvalues[self.input_nodes[0]] += 1
+            self.dvalues[self.input_nodes[2]] += np.ones_like(self.input_nodes[2].value)
             return
         for n in self.output_nodes:
             dval = n.dvalues[self]
-            self.dvalues[self.input_nodes[0]] += self.input_nodes[1].value.dot(dval)
-            self.dvalues[self.input_nodes[1]] += self.input_nodes[0].value.dot(dval)
-            self.dvalues[self.input_nodes[0]] += dval
+            self.dvalues[self.input_nodes[0]] += self.input_nodes[1].value * dval
+            self.dvalues[self.input_nodes[1]] += self.input_nodes[0].value * dval
+            self.dvalues[self.input_nodes[2]] += np.ones_like(self.input_nodes[2].value) * dval
 
 class Sigmoid(Node):
     def __init__(self, x):
         Node.__init__(self, [x])
 
     def _sigmoid(self, x):
-        # TODO: implement sigmoid function
-        pass
+        return 1. / (1. + np.exp(-x))
 
     def forward(self):
-        # TODO: implement
-        pass
+        self.value = self._sigmoid(self.input_nodes[0].value)
 
     def backward(self):
-        # TODO: implement
         self.dvalues = {n: np.zeros_like(n.value) for n in self.input_nodes}
+        x = self.input_nodes[0]
+        if len(self.output_nodes) == 0:
+            self.dvalues[x] += np.exp(x.value) / ((np.exp(x.value) + 1) ** 2)
+            return
+        for n in self.output_nodes:
+            dval = n.dvalues[self]
+            self.dvalues[x] += dval * np.exp(x.value) / ((np.exp(x.value) + 1) ** 2)
 
 
 # NOTE: assume y is a vector with values 0-9
@@ -213,12 +217,11 @@ class CrossEntropyWithSoftmax(Node):
         return np.mean(preds == self.input_nodes[1].value)
 
     def _softmax(self, x):
-        # TODO: implement softmax function
-        pass
+        ex = np.exp(x)
+        return ex / np.sum(ex, 1, keepdims = True)
 
     def forward(self):
-        # TODO: implement
-        pass
+        self.value = -np.log(self._softmax(self.input_nodes[0].value))[0,self.input_nodes[1].value]
 
     def backward(self):
         # TODO: implement
